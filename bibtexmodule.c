@@ -114,6 +114,15 @@ py_message_handler (const gchar *log_domain G_GNUC_UNUSED,
     PyErr_SetString (PyExc_IOError, message);
 }
 
+static char bib_open_file_doc[] =
+    "open_file(filename, strictness) -> BibtexSource object\n\n"
+    "Create an object for the specified filename to parse from.\n\n"
+    "Args:\n"
+    "    filename (str) -- The BibTex file name\n"
+    "    stricness (boolean) -- Set the parser strict or lousy\n"
+    "Returns:\n"
+    "    A BibtexSource object to start parsing from";
+
 static PyObject *
 bib_open_file (PyObject * self, PyObject * args)
 {
@@ -145,6 +154,16 @@ bib_open_file (PyObject * self, PyObject * args)
     return (PyObject *) ret;
 }
 
+static char bib_open_string_doc[] =
+    "open_string(name, string, strictness) -> BibtexSource object\n\n"
+    "Create an object for the specified filename to parse from.\n\n"
+    "Args:\n"
+    "    name (str) -- A BibTex tag name.\n"
+    "    string (str) -- String to parse.\n"
+    "    stricness (boolean) -- Set the parser strict or lousy.\n"
+    "Returns:\n"
+    "    A BibtexSource object to start parsing from.";
+
 static PyObject *
 bib_open_string (PyObject * self, PyObject * args)
 {
@@ -175,6 +194,27 @@ bib_open_string (PyObject * self, PyObject * args)
     ret->obj = file;
     return (PyObject *) ret;
 }
+
+static char bib_expand_doc[] =
+    "expand(source, field, field_type) -> Tuple\n\n"
+    "Expand a Bibtex field given its type.  Currently it can split\n"
+    "`author` names, set a date tuple for `year`, and expand the `title`\n"
+    "In all these cases, any LaTeX command will be converted to text.\n\n"
+    "Args:\n"
+    "    source (BibtexSource) -- A Bibtex source object (parser).\n"
+    "    field (str) -- A single raw BibTex field or record.\n"
+    "    field_type (int) -- Data type of field.\n"
+    "Returns:\n"
+    "    A tuple of three or more values depending of `field_type`.\n"
+    "    The first two value indicates the `type` parsed, and whether\n"
+    "    there was loss of information during the conversion (`loss`).\n"
+    "      Date -> (type, loss, year, month, day)\n"
+    "              In case of no data, the values will be set to 0.\n"
+    "      Author -> (type, loss, [(honorific, first, last, lineage),...])\n"
+    "              In case of no data, the values will be set to None.\n"
+    "      Title -> (type, loss, content)\n"
+    "      Verbatim -> (type, loss, raw_content).\n"
+    "      Other -> (type, loss, content)";
 
 static PyObject *
 bib_expand (PyObject * self, PyObject * args) {
@@ -287,6 +327,14 @@ bib_expand (PyObject * self, PyObject * args) {
     return tmp;
 }
 
+static char bib_get_native_doc[] =
+    "get_native(field) -> str\n\n"
+    "Get the native BibTex content of `field`.\n\n"
+    "Args:\n"
+    "    field (str) -- A BibTex field\n"
+    "Returns:\n"
+    "    A string with a native BibTex conversion of `field`.";
+
 static PyObject *
 bib_get_native (PyObject * self, PyObject * args) {
     PyObject * tmp;
@@ -311,6 +359,14 @@ bib_get_native (PyObject * self, PyObject * args) {
     return tmp;
 }
 
+static char bib_copy_field_doc[] =
+    "copy_field(field) -> BibtexField\n\n"
+    "Makes a copy of `field`.\n\n"
+    "Args:\n"
+    "    field (str) -- A BibTex field\n"
+    "Returns:\n"
+    "    A BibtexField with a new copy of `field`.";
+
 static PyObject *
 bib_copy_field (PyObject * self, PyObject * args) {
     BibtexField * field;
@@ -328,6 +384,14 @@ bib_copy_field (PyObject * self, PyObject * args) {
     new_obj->obj = bibtex_struct_as_field (bibtex_struct_copy (field->structure), field->type);
     return (PyObject *) new_obj;
 }
+
+static char bib_get_latex_doc[] =
+    "get_latex(field_type, field) -> str\n\n"
+    "Get a LaTeX representation of `field` considering its type..\n\n"
+    "Args:\n"
+    "    field (str) -- A BibTex field\n"
+    "Returns:\n"
+    "    A string with a LaTex text of `field`.";
 
 static PyObject *
 bib_get_latex (PyObject * self, PyObject * args) {
@@ -356,6 +420,15 @@ bib_get_latex (PyObject * self, PyObject * args) {
 
     return tmp;
 }
+
+static char bib_set_native_doc[] =
+    "set_native(content, field_type) -> str\n\n"
+    "Set the native BibTex content of `field`.\n\n"
+    "Args:\n"
+    "    content (str) -- A string to convert in native format\n"
+    "    field_type (int) -- Data type to convert `content`.\n"
+    "Returns:\n"
+    "    A BibTexField `field` or None if it cannot parse `content`.";
 
 static PyObject *
 bib_set_native (PyObject * self, PyObject * args) {
@@ -442,6 +515,14 @@ fill_struct_dico (gpointer key, gpointer value, gpointer user)
     Py_DECREF (tmp1);
     Py_DECREF (tmp2);
 }
+
+static char bib_set_string_doc[] =
+    "set_string(source, key, field) -> str\n\n"
+    "Set a copy of `field` as the `field` value.\n\n"
+    "Args:\n"
+    "    source (BibtexSource) -- A Bibtex source object (parser).\n"
+    "    key (str) -- The field key where to set `field`.\n"
+    "    field (BibTexField) -- Content to set into `key`.";
 
 static PyObject *
 bib_set_string (PyObject * self, PyObject * args)
@@ -538,6 +619,15 @@ _bib_next (PyBibtexSource_Object * file_obj, gboolean filter)
     return tmp;
 }
 
+static char bib_next_doc[] =
+    "next(source) -> Tuple\n\n"
+    "Get the next BibTex entry from `source`.\n\n"
+    "Args:\n"
+    "    source (BibtexSource) -- A Bibtex source object (parser).\n"
+    "Returns:\n"
+    "Returns:\n"
+    "    A tuple (key, field_type, offset, line, object)\n";
+
 static PyObject *
 bib_next (PyObject * self, PyObject * args)
 {
@@ -548,6 +638,14 @@ bib_next (PyObject * self, PyObject * args)
 
     return _bib_next (file_obj, TRUE);
 }
+
+static char bib_next_unfiltered_doc[] =
+    "next_unfiltered(source) -> Tuple\n\n"
+    "Get the next BibTex entry from `source`.\n\n"
+    "Args:\n"
+    "    source (BibtexSource) -- A Bibtex source object (parser).\n"
+    "Returns:\n"
+    "    A tuple ('entry', key, field_type, offset, line, object)\n";
 
 static PyObject *
 bib_next_unfiltered (PyObject * self, PyObject * args)
@@ -560,6 +658,13 @@ bib_next_unfiltered (PyObject * self, PyObject * args)
     return _bib_next (file_obj, FALSE);
 }
 
+static char bib_get_dict_doc[] =
+    "get_dict(source) -> Dict\n\n"
+    "Get a dictionaty of entries from `source`.\n\n"
+    "Args:\n"
+    "    source (BibtexSource) -- A Bibtex source object (parser).\n"
+    "Returns:\n"
+    "    A dictionary of entries.\n";
 
 static PyObject *
 bib_get_dict (PyObject * self, PyObject * args)
@@ -580,6 +685,11 @@ bib_get_dict (PyObject * self, PyObject * args)
     return dico;
 }
 
+static char bib_first_doc[] =
+    "next_unfiltered(source)\n\n"
+    "Set `source` in the first BibTex entry.\n\n"
+    "Args:\n"
+    "    source (BibtexSource) -- A Bibtex source object (parser).\n";
 
 static PyObject *
 bib_first (PyObject * self, PyObject * args)
@@ -597,6 +707,9 @@ bib_first (PyObject * self, PyObject * args)
     Py_INCREF(Py_None);
     return Py_None;
 }
+
+static char bib_reverse_doc[] =
+    "reverse(field_type, use_braces, content) -> BibtexField\n\n";
 
 static PyObject *
 bib_reverse (PyObject * self, PyObject * args)
@@ -715,6 +828,8 @@ bib_reverse (PyObject * self, PyObject * args)
     return tmp;
 }
 
+static char bib_set_offset_doc[] =
+    "set_offset(source)\n\n";
 
 static PyObject *
 bib_set_offset (PyObject * self, PyObject * args)
@@ -738,6 +853,8 @@ bib_set_offset (PyObject * self, PyObject * args)
     return Py_None;
 }
 
+static char bib_get_offset_doc[] =
+    "get_offset(source) -> int\n\n";
 
 static PyObject *
 bib_get_offset (PyObject * self, PyObject * args)
@@ -760,24 +877,27 @@ bib_get_offset (PyObject * self, PyObject * args)
 
 
 static PyMethodDef bibtexMeth [] = {
-    { "open_file", bib_open_file, METH_VARARGS },
-    { "open_string", bib_open_string, METH_VARARGS },
-    { "next", bib_next, METH_VARARGS },
-    { "next_unfiltered", bib_next_unfiltered, METH_VARARGS },
-    { "first", bib_first, METH_VARARGS },
-    { "set_offset", bib_set_offset, METH_VARARGS },
-    { "get_offset", bib_get_offset, METH_VARARGS },
-    { "expand", bib_expand, METH_VARARGS },
-    { "get_native", bib_get_native, METH_VARARGS },
-    { "get_latex", bib_get_latex, METH_VARARGS },
-    { "set_native", bib_set_native, METH_VARARGS },
-    { "reverse", bib_reverse, METH_VARARGS },
-    { "get_dict", bib_get_dict, METH_VARARGS },
-    { "set_string", bib_set_string, METH_VARARGS },
-    { "copy_field", bib_copy_field, METH_VARARGS },
+    { "open_file", bib_open_file, METH_VARARGS, bib_open_file_doc },
+    { "open_string", bib_open_string, METH_VARARGS, bib_open_string_doc },
+    { "next", bib_next, METH_VARARGS, bib_next_doc },
+    { "next_unfiltered", bib_next_unfiltered, METH_VARARGS, bib_next_unfiltered_doc },
+    { "first", bib_first, METH_VARARGS, bib_first_doc },
+    { "set_offset", bib_set_offset, METH_VARARGS, bib_set_offset_doc },
+    { "get_offset", bib_get_offset, METH_VARARGS, bib_get_offset_doc },
+    { "expand", bib_expand, METH_VARARGS, bib_expand_doc, },
+    { "get_native", bib_get_native, METH_VARARGS, bib_get_native_doc },
+    { "get_latex", bib_get_latex, METH_VARARGS, bib_get_latex_doc },
+    { "set_native", bib_set_native, METH_VARARGS, bib_set_native_doc },
+    { "reverse", bib_reverse, METH_VARARGS, bib_reverse_doc },
+    { "get_dict", bib_get_dict, METH_VARARGS, bib_get_dict_doc },
+    { "set_string", bib_set_string, METH_VARARGS, bib_set_string_doc },
+    { "copy_field", bib_copy_field, METH_VARARGS, bib_copy_field_doc },
     {NULL, NULL, 0},
 };
 
+static char bibtex_doc[] =
+    "A BibTeX parser\n\n"
+    "This module provides the components needed to parse a BibTex file\n";
 
 void init_bibtex (void)
 {
@@ -790,6 +910,6 @@ void init_bibtex (void)
 		       py_message_handler, NULL);
     g_log_set_always_fatal (G_LOG_LEVEL_CRITICAL);
 
-    (void) Py_InitModule("_bibtex", bibtexMeth);
+    (void) Py_InitModule3("_bibtex", bibtexMeth, bibtex_doc);
 }
 
