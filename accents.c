@@ -27,6 +27,11 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <stdbool.h>
+#include <sys/types.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <recode.h>
 
 #include "bibtex.h"
 
@@ -214,7 +219,7 @@ eat_as_string (GList ** flow,
 }
 
 gchar * 
-bibtex_accent_string (BibtexStruct * s, 
+bibtex_to_latin1 (BibtexStruct * s, 
 		      GList ** flow,
 		      gboolean * loss) {
     
@@ -326,6 +331,37 @@ bibtex_accent_string (BibtexStruct * s,
     bibtex_warning ("unable to convert `\\%s'", s->value.com);
 
     return g_strdup (s->value.com);
+}
+
+gchar *
+bibtex_accent_string(BibtexStruct * s, 
+		      GList ** flow,
+		      gboolean * loss) {
+
+    gchar * utf8_string;
+    gchar * latin1_string;
+    static RECODE_OUTER   outer   = NULL;
+    static RECODE_REQUEST request = NULL;
+
+
+    if (outer == NULL) {
+	outer = recode_new_outer (false);
+	g_assert (outer != NULL);
+    }
+
+    if (request == NULL) {
+	request = recode_new_request (outer);
+	g_assert (request != NULL);
+	if (! recode_scan_request (request, "latin1..utf8")) {
+	    g_error ("can't create recoder");
+	}
+    }
+
+    latin1_string = bibtex_to_latin1(s, flow, loss);
+    utf8_string = recode_string(request, latin1_string);
+    g_free(latin1_string);
+
+    return utf8_string;
 }
 
 

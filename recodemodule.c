@@ -48,10 +48,12 @@ typedef enum
 
 #endif /* HAVE_STDBOOL_H */
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
 #include <stdio.h>
 #include <recodext.h>
+#include "python2_compat.h"
 
 static RECODE_OUTER outer;
 char * program_name = "pyrecode";
@@ -70,25 +72,15 @@ static void py_delete_recoder (PyRecodeRequest_Object * self) {
 static char PyRecodeRequest_Type__doc__[]  = "This is the type of a recoder";
 
 static PyTypeObject PyRecodeRequest_Type = {
-  PyObject_HEAD_INIT(NULL)
-  0,                              /*ob_size*/
-  "RecodeRequest",                 /*tp_name*/
+					    .ob_base= { PyObject_HEAD_INIT(NULL)},
+#if PY_MAJOR_VERSION < 3
+  0,				  /*ob_size*/ 
+#endif
+  "RecodeRequest",                /*tp_name*/
   sizeof(PyRecodeRequest_Object), /*tp_basicsize*/
   0,                              /*tp_itemsize*/
-  (destructor)py_delete_recoder,  /*tp_dealloc*/
-  (printfunc)0,                   /*tp_print*/
-  (getattrfunc)0,                 /*tp_getattr*/
-  (setattrfunc)0,                 /*tp_setattr*/
-  (cmpfunc)0,                     /*tp_compare*/
-  (reprfunc)0,                    /*tp_repr*/
-  0,                              /*tp_as_number*/
-  0,                              /*tp_as_sequence*/
-  0,                              /*tp_as_mapping*/
-  (hashfunc)0,                    /*tp_hash*/
-  (ternaryfunc)0,                 /*tp_call*/
-  (reprfunc)0,                    /*tp_str*/
-  0L,0L,0L,0L,
-  PyRecodeRequest_Type__doc__
+  .tp_dealloc = (destructor)py_delete_recoder,  /*tp_dealloc*/
+  .tp_doc = PyRecodeRequest_Type__doc__,
 };
 
 static PyObject *
@@ -139,7 +131,7 @@ py_recode (PyObject * self, PyObject * args) {
     length  = strlen (string);
 
     if (length == 0) {
-      return PyString_FromString ("");
+      return PyUnicode_FromString ("");
     }
 
     string = recode_string (request, string);
@@ -149,7 +141,7 @@ py_recode (PyObject * self, PyObject * args) {
       return NULL;
     }
 
-    tmp = PyString_FromString (string);
+    tmp = PyUnicode_FromString (string);
     free (string);
 
     return tmp;
@@ -161,17 +153,38 @@ static PyMethodDef recodeMeth [] = {
     {NULL, NULL, 0},
 };
 
-
-void init_recode (void)
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef recodeModule =
 {
-    PyRecodeRequest_Type.ob_type = & PyType_Type;
+   PyModuleDef_HEAD_INIT,
+   "recode",
+   "",
+   -1,
+   recodeMeth
+};
+
+PyMODINIT_FUNC PyInit__recode(void)
+{
+    PyRecodeRequest_Type.ob_base.ob_base.ob_type = & PyType_Type;
 
     outer = recode_new_outer (true);
     if (outer == NULL) {
 	fprintf (stderr, "_recode: error: cannot initialize outer interface.\n");
-	return;
+	return Py_None;
     }
 
-    (void) Py_InitModule ("_recode", recodeMeth);
+    return PyModule_Create(&recodeModule);
 }
+#else
+void init_recode (void)
+{
+   PyRecodeRequest_Type.ob_type = & PyType_Type;
 
+   outer = recode_new_outer (true);
+   if (outer == NULL) {
+      fprintf (stderr, "_recode: error: cannot initialize outer interface.\n");
+      return;
+   }
+   (void) Py_InitModule ("_recode", recodeMeth);
+}
+#endif

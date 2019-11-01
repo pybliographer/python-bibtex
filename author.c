@@ -43,7 +43,7 @@ bibtex_author_group_new (void) {
 
 void
 bibtex_author_group_destroy (BibtexAuthorGroup * group) {
-    int i;
+    unsigned int i;
     BibtexAuthor * field;
 
     g_return_if_fail (group != NULL);

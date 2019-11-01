@@ -6,7 +6,7 @@ from distutils.core import setup, Extension, Command
 from distutils.errors import DistutilsExecError
 from distutils.command.install import install as base_install
 
-version = '1.2.7'
+version = '1.2.8'
 
 
 bibtex = [
@@ -97,7 +97,7 @@ def rename (src, dst):
 
 if rebuild ('bibparse.y', ['bibparse.c',
                            'bibparse.h']):
-    print "rebuilding from bibparse.y"
+    print("rebuilding from bibparse.y")
 
     os.system ('bison -y -d -t -p bibtex_parser_ bibparse.y')
 
@@ -106,7 +106,7 @@ if rebuild ('bibparse.y', ['bibparse.c',
 
 
 if rebuild ('biblex.l', ['biblex.c']):
-    print "rebuilding from biblex.l"
+    print("rebuilding from biblex.l")
 
     os.system ('flex -Pbibtex_parser_ biblex.l')
 
@@ -143,12 +143,15 @@ class run_check (Command):
 
         sys.path.insert (0, libdir)
 
-        import testsuite
+        if sys.version_info < (3,0):
+            import testsuite
+        else:
+            import testsuite3 as testsuite
 
         try:
             failures = testsuite.run ()
 
-        except RuntimeError, msg:
+        except RuntimeError as msg:
             sys.stderr.write ('error: %s\n' % msg)
             raise DistutilsExecError ('please consult the "Troubleshooting" section in the README file.')
 

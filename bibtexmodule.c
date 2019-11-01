@@ -26,8 +26,10 @@
 #endif
 
 #include <Python.h>
+
 #include "bibtex.h"
 
+#include "python2_compat.h"
 char program_name [] = "bibtexmodule";
 
 typedef struct {
@@ -60,8 +62,10 @@ static char PyBibtexSource_Type__doc__[] = "This is the type of a BibTeX source"
 static char PyBibtexField_Type__doc__[]  = "This is the type of an internal BibTeX field";
 
 static PyTypeObject PyBibtexSource_Type = {
-  PyObject_HEAD_INIT(NULL)
-  0,                              /*ob_size*/
+  { PyObject_HEAD_INIT(NULL) },
+#if PY_MAJOR_VERSION < 3
+  0,				  /* ob_size */
+#endif
   "BibtexSource",                 /*tp_name*/
   sizeof(PyBibtexSource_Object),  /*tp_basicsize*/
   0,                              /*tp_itemsize*/
@@ -69,7 +73,7 @@ static PyTypeObject PyBibtexSource_Type = {
   (printfunc)0,                   /*tp_print*/
   (getattrfunc)0,                 /*tp_getattr*/
   (setattrfunc)0,                 /*tp_setattr*/
-  (cmpfunc)0,                     /*tp_compare*/
+  0,				  /*tp_as_async OR tp_compare*/
   (reprfunc)0,                    /*tp_repr*/
   0,                              /*tp_as_number*/
   0,                              /*tp_as_sequence*/
@@ -77,13 +81,15 @@ static PyTypeObject PyBibtexSource_Type = {
   (hashfunc)0,                    /*tp_hash*/
   (ternaryfunc)0,                 /*tp_call*/
   (reprfunc)0,                    /*tp_str*/
-  0L,0L,0L,0L,
-  PyBibtexSource_Type__doc__
+  0L,0L,0L,0L,			  /* tp_getattro, tp_setattro, tp_as_buffer, tp_flags */
+  PyBibtexSource_Type__doc__,	  /* tp_doc */
 };
 
 static PyTypeObject PyBibtexField_Type = {
-  PyObject_HEAD_INIT(NULL)
-  0,                              /*ob_size*/
+ { PyObject_HEAD_INIT(NULL) },
+#if PY_MAJOR_VERSION < 3
+  0,				  /* ob_size */
+#endif
   "BibtexField",                  /*tp_name*/
   sizeof(PyBibtexField_Object) ,  /*tp_basicsize*/
   0,                              /*tp_itemsize*/
@@ -91,8 +97,8 @@ static PyTypeObject PyBibtexField_Type = {
   (printfunc)0,                   /*tp_print*/
   (getattrfunc)0,                 /*tp_getattr*/
   (setattrfunc)0,                 /*tp_setattr*/
-  (cmpfunc)0,                     /*tp_compare*/
-  (reprfunc)0,                    /*tp_repr*/
+  0,	                          /*tp_compare*/
+  0,	                          /*tp_repr*/
   0,                              /*tp_as_number*/
   0,                              /*tp_as_sequence*/
   0,                              /*tp_as_mapping*/
@@ -100,7 +106,7 @@ static PyTypeObject PyBibtexField_Type = {
   (ternaryfunc)0,                 /*tp_call*/
   (reprfunc)0,                    /*tp_str*/
   0L,0L,0L,0L,
-  PyBibtexField_Type__doc__
+  PyBibtexField_Type__doc__,
 };
 
 
@@ -226,7 +232,8 @@ bib_expand (PyObject * self, PyObject * args) {
     PyBibtexField_Object * field_obj;
     BibtexAuthor * author;
 
-    int i, j;
+    unsigned int i;
+    int j;
 
     if (! PyArg_ParseTuple(args, "O!O!i:expand", 
 			   &PyBibtexSource_Type, & file_obj, 
@@ -238,12 +245,13 @@ bib_expand (PyObject * self, PyObject * args) {
     field = field_obj->obj;
 
     if (! field->converted) {
-	if (type != -1) {
+      if (type != (BibtexFieldType)-1) {
 	    field->type = type;
 	}
 
 	bibtex_field_parse(field, file->table);
     }
+    
 
     switch (field->type) {
     case BIBTEX_TITLE:
@@ -270,7 +278,7 @@ bib_expand (PyObject * self, PyObject * args) {
 	    author = & g_array_index (field->field.author, 
 				      BibtexAuthor, i);
 	    if (author->honorific) {
-		auth [0] = PyString_FromString (author->honorific);
+	      auth [0] = PyUnicode_FromString(author->honorific);
 	    }
 	    else {
 		auth [0] = Py_None; 
@@ -278,7 +286,7 @@ bib_expand (PyObject * self, PyObject * args) {
 	    }
 
 	    if (author->first) {
-		auth [1] = PyString_FromString (author->first);
+	      auth [1] = PyUnicode_FromString(author->first);
 	    }
 	    else {
 		auth [1] = Py_None; 
@@ -286,7 +294,7 @@ bib_expand (PyObject * self, PyObject * args) {
 	    }
 
 	    if (author->last) {
-		auth [2] = PyString_FromString (author->last);
+	      auth [2] = PyUnicode_FromString(author->last);
 	    }
 	    else {
 		auth [2] = Py_None; 
@@ -294,7 +302,7 @@ bib_expand (PyObject * self, PyObject * args) {
 	    }
 
 	    if (author->lineage) {
-		auth [3] = PyString_FromString (author->lineage);
+	      auth [3] = PyUnicode_FromString(author->lineage);
 	    }
 	    else {
 		auth [3] = Py_None; 
@@ -483,7 +491,7 @@ fill_dico (gpointer key, gpointer value, gpointer user)
     PyObject * dico = (PyObject *) user;
     PyObject * tmp1, * tmp2;
 
-    tmp1 = PyString_FromString ((char *) key);
+    tmp1 = PyUnicode_FromString ((char *) key);
     tmp2 = (PyObject *) PyObject_NEW (PyBibtexField_Object, & PyBibtexField_Type);
     /* this only happens when OOM'ing, not much to salvage except not crashing */
     if (tmp1 == NULL || tmp2 == NULL) return;
@@ -502,7 +510,7 @@ fill_struct_dico (gpointer key, gpointer value, gpointer user)
     PyObject * dico = (PyObject *) user;
     PyObject * tmp1, * tmp2;
 
-    tmp1 = PyString_FromString ((char *) key);
+    tmp1 = PyUnicode_FromString ((char *) key);
     tmp2 = (PyObject *) PyObject_NEW (PyBibtexField_Object, & PyBibtexField_Type);
     /* this only happens when OOM'ing, not much to salvage except not crashing */
     if (tmp1 == NULL || tmp2 == NULL) return;
@@ -592,7 +600,7 @@ _bib_next (PyBibtexSource_Object * file_obj, gboolean filter)
 	g_hash_table_foreach (ent->table, fill_dico, dico);
 	
 	if (ent->name) {
-	    name = PyString_FromString (ent->name);
+	    name = PyUnicode_FromString (ent->name);
 	}
 	else {
 	    name = Py_None;
@@ -742,7 +750,7 @@ bib_reverse (PyObject * self, PyObject * args)
 	tmp = PyObject_Str (tuple);
 	if (tmp == NULL) return NULL;
 
-	field->text = g_strdup (PyString_AsString (tmp));
+	field->text = g_strdup (PyUnicode_AsUTF8 (tmp));
 	Py_DECREF (tmp);
 	break;
 
@@ -751,21 +759,21 @@ bib_reverse (PyObject * self, PyObject * args)
 	if (tmp == NULL) return NULL;
 
 	if (tmp != Py_None)
-	    field->field.date.year  = PyInt_AsLong (tmp);
+	    field->field.date.year  = PyLong_AsLong (tmp);
 	Py_DECREF (tmp);
 
 	tmp = PyObject_GetAttrString (tuple, "month");
 	if (tmp == NULL) return NULL;
 
 	if (tmp != Py_None)
-	    field->field.date.month = PyInt_AsLong (tmp);
+	    field->field.date.month = PyLong_AsLong (tmp);
 	Py_DECREF (tmp);
 
 	tmp = PyObject_GetAttrString (tuple, "day");
 	if (tmp == NULL) return NULL;
 
 	if (tmp != Py_None)
-	    field->field.date.day   = PyInt_AsLong (tmp);
+	    field->field.date.day   = PyLong_AsLong (tmp);
 	Py_DECREF (tmp);
 	break;
 
@@ -784,7 +792,7 @@ bib_reverse (PyObject * self, PyObject * args)
 	    
 	    tmp = PyObject_GetAttrString (authobj, "last");
 	    if (tmp != Py_None) {
-		auth->last = g_strdup (PyString_AsString (tmp));
+		auth->last = g_strdup (PyUnicode_AsUTF8 (tmp));
 	    }
 	    else {
 		auth->last = NULL;
@@ -792,7 +800,7 @@ bib_reverse (PyObject * self, PyObject * args)
 	    Py_DECREF (tmp);
 	    tmp = PyObject_GetAttrString (authobj, "first");
 	    if (tmp != Py_None) {
-		auth->first = g_strdup (PyString_AsString (tmp));
+		auth->first = g_strdup (PyUnicode_AsUTF8 (tmp));
 	    }
 	    else {
 		auth->first = NULL;
@@ -800,7 +808,7 @@ bib_reverse (PyObject * self, PyObject * args)
 	    Py_DECREF (tmp);
 	    tmp = PyObject_GetAttrString (authobj, "lineage");
 	    if (tmp != Py_None) {
-		auth->lineage = g_strdup (PyString_AsString (tmp));
+		auth->lineage = g_strdup (PyUnicode_AsUTF8 (tmp));
 	    }
 	    else {
 		auth->lineage = NULL;
@@ -808,7 +816,7 @@ bib_reverse (PyObject * self, PyObject * args)
 	    Py_DECREF (tmp);
 	    tmp = PyObject_GetAttrString (authobj, "honorific");
 	    if (tmp != Py_None) {
-		auth->honorific = g_strdup (PyString_AsString (tmp));
+		auth->honorific = g_strdup (PyUnicode_AsUTF8 (tmp));
 	    }
 	    else {
 		auth->honorific = NULL;
@@ -871,7 +879,7 @@ bib_get_offset (PyObject * self, PyObject * args)
 
     offset = bibtex_source_get_offset (file);
     
-    tmp = PyInt_FromLong ((long) offset);
+    tmp = PyLong_FromLong ((long) offset);
     return tmp;
 }
 
@@ -899,6 +907,29 @@ static char bibtex_doc[] =
     "A BibTeX parser\n\n"
     "This module provides the components needed to parse a BibTex file\n";
 
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef BiBTeXModule =
+{
+   PyModuleDef_HEAD_INIT,
+   "_bibtex",
+   bibtex_doc,
+   -1,
+   bibtexMeth
+};
+
+PyMODINIT_FUNC
+PyInit__bibtex(void)
+{
+   PyBibtexSource_Type.ob_base.ob_base.ob_type = & PyType_Type;
+   PyBibtexField_Type.ob_base.ob_base.ob_type =  & PyType_Type;
+   bibtex_set_default_handler ();
+
+   g_log_set_handler (G_LOG_DOMAIN, BIB_LEVEL_ERROR,   
+		       py_message_handler, NULL);
+   g_log_set_always_fatal (G_LOG_LEVEL_CRITICAL);
+   return PyModule_Create(&BiBTeXModule);
+}
+#else
 void init_bibtex (void)
 {
     PyBibtexSource_Type.ob_type = & PyType_Type;
@@ -912,4 +943,4 @@ void init_bibtex (void)
 
     (void) Py_InitModule3("_bibtex", bibtexMeth, bibtex_doc);
 }
-
+#endif

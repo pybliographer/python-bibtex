@@ -108,7 +108,7 @@ bibtex_reverse_field (BibtexField * field,
     BibtexStruct * s = NULL;
     gchar * string, * tmp;
     gboolean is_upper, has_space, is_command, was_command;
-    gint i;
+    guint i;
     BibtexAuthor * author;
 
     static GString *      st      = NULL;
@@ -127,7 +127,7 @@ bibtex_reverse_field (BibtexField * field,
     if (request == NULL) {
 	request = recode_new_request (outer);
 	g_assert (request != NULL);
-	if (! recode_scan_request (request, "latin1..latex")) {
+	if (! recode_scan_request (request, "utf8..latex")) {
 	    g_error ("can't create recoder");
 	}
     }
