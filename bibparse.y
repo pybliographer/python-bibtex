@@ -347,7 +347,7 @@ value:	  L_NAME '=' content
 
     /* Get a new instance of a field name */
     if (field) {
-	g_string_sprintf (tmp_string, "field `%s' is already defined", $1); 
+	g_string_printf (tmp_string, "field `%s' is already defined", $1); 
 	bibtex_parser_warning (tmp_string->str);
     }
 
